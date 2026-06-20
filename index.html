@@ -164,12 +164,13 @@
   <!-- SCAN (solo Lavoro Rimborso) -->
   <div class="card" id="scan-section" style="display:none">
     <div class="card-title">📷 Scansione Scontrino</div>
-    <div class="scan-area" onclick="document.getElementById('camera-input').click()">
-      <div class="scan-icon">📸</div>
-      <div class="scan-text">Tocca per fotografare lo scontrino</div>
+    <div class="scan-area" onclick="document.getElementById('file-input').click()">
+      <div class="scan-icon">📄</div>
+      <div class="scan-text">Tocca per scansionare con Google Drive</div>
     </div>
-    <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="onImageSelected(event)">
+    <input type="file" id="file-input" accept="image/*,application/pdf" onchange="onImageSelected(event)">
     <img id="image-preview" alt="Anteprima scontrino">
+    <div id="pdf-badge" style="display:none;text-align:center;padding:12px;background:#e8f0fe;border-radius:8px;margin-top:12px;color:#1a73e8;font-weight:500">📄 PDF caricato — pronto per l'analisi</div>
     <button id="analyze-btn" onclick="analyzeWithClaude()">✨ Analizza con AI</button>
   </div>
 
@@ -335,16 +336,51 @@ function onCategoriaChange() {
 function onImageSelected(evt) {
   const file = evt.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const base64 = e.target.result.split(',')[1];
-    capturedImage = { base64, blob: file, type: file.type };
-    const preview = document.getElementById('image-preview');
-    preview.src = e.target.result;
-    preview.style.display = 'block';
-    document.getElementById('analyze-btn').style.display = 'block';
+
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  if (file.type === 'application/pdf') {
+    URL.revokeObjectURL(objectUrl);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result.split(',')[1];
+      capturedImage = { base64, blob: file, type: 'application/pdf' };
+      const preview = document.getElementById('image-preview');
+      preview.src = '';
+      preview.style.display = 'none';
+      document.getElementById('pdf-badge').style.display = 'block';
+      document.getElementById('analyze-btn').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+
+  img.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    const MAX = 1280;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else       { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    canvas.toBlob(blob => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result.split(',')[1];
+        capturedImage = { base64, blob, type: 'image/jpeg' };
+        const preview = document.getElementById('image-preview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        document.getElementById('pdf-badge').style.display = 'none';
+        document.getElementById('analyze-btn').style.display = 'block';
+      };
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.82);
   };
-  reader.readAsDataURL(file);
+  img.src = objectUrl;
 }
 
 // ─── CLAUDE API ────────────────────────────────────────────────────────────
@@ -369,7 +405,9 @@ async function analyzeWithClaude() {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: capturedImage.type, data: capturedImage.base64 } },
+            capturedImage.type === 'application/pdf'
+              ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: capturedImage.base64 } }
+              : { type: 'image',    source: { type: 'base64', media_type: capturedImage.type, data: capturedImage.base64 } },
             { type: 'text',  text:
               'Analizza questo scontrino/ricevuta italiano. ' +
               'Rispondi SOLO con un oggetto JSON valido, nessun testo aggiuntivo prima o dopo. ' +
@@ -527,7 +565,7 @@ function resetForm() {
   document.getElementById('image-preview').style.display  = 'none';
   document.getElementById('analyze-btn').style.display    = 'none';
   document.getElementById('scan-section').style.display   = 'none';
-  ['importo-ai','fornitore-ai','note-ai'].forEach(id => document.getElementById(id).style.display = 'none');
+  ['importo-ai','fornitore-ai','note-ai','pdf-badge'].forEach(id => document.getElementById(id).style.display = 'none');
 }
 </script>
 </body>
