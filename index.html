@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>App Spese</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1557b0;
+      --success: #34a853;
+      --error: #ea4335;
+      --warn: #fbbc04;
+      --bg: #f1f3f4;
+      --white: #ffffff;
+      --text: #202124;
+      --text2: #5f6368;
+      --border: #dadce0;
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* LOGIN */
+    #login-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px; gap: 24px;
+    }
+    .login-logo { font-size: 48px; }
+    .login-title { font-size: 24px; font-weight: 700; color: var(--text); }
+    .login-sub { font-size: 14px; color: var(--text2); text-align: center; }
+    .btn-google {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--white); border: 1px solid var(--border); border-radius: 24px;
+      padding: 12px 24px; font-size: 16px; font-weight: 500; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12); transition: box-shadow .2s;
+    }
+    .btn-google:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+
+    /* APP */
+    #app-screen { display: none; max-width: 480px; margin: 0 auto; padding-bottom: 32px; }
+
+    /* HEADER */
+    .header {
+      background: var(--primary); color: white; padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-title { font-size: 18px; font-weight: 600; }
+    .btn-logout { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 16px; font-size: 13px; cursor: pointer; }
+
+    /* CARD */
+    .card { background: var(--white); border-radius: var(--radius); margin: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+
+    /* SCAN */
+    .scan-area {
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      padding: 24px; text-align: center; cursor: pointer; transition: border-color .2s;
+    }
+    .scan-area:hover { border-color: var(--primary); }
+    .scan-icon { font-size: 40px; margin-bottom: 8px; }
+    .scan-text { font-size: 14px; color: var(--text2); }
+    #camera-input { display: none; }
+    #image-preview { width: 100%; border-radius: 8px; margin-top: 12px; display: none; }
+    #analyze-btn {
+      display: none; width: 100%; margin-top: 10px;
+      background: var(--primary); color: white; border: none; border-radius: 24px;
+      padding: 12px; font-size: 15px; font-weight: 500; cursor: pointer;
+    }
+    #analyze-btn:disabled { opacity: .6; }
+
+    /* FORM */
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+    label .req { color: var(--error); }
+    input, select, textarea {
+      width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 15px; color: var(--text); background: var(--white); outline: none;
+      transition: border-color .2s; -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,.12); }
+    textarea { resize: vertical; min-height: 72px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* AI BADGE */
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--primary); background: rgba(26,115,232,.08);
+      border-radius: 10px; padding: 2px 8px; margin-left: 6px;
+    }
+
+    /* SUBMIT */
+    #submit-btn {
+      width: calc(100% - 24px); margin: 4px 12px; padding: 16px;
+      background: var(--success); color: white; border: none; border-radius: var(--radius);
+      font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity .2s;
+    }
+    #submit-btn:disabled { opacity: .6; }
+
+    /* STATUS */
+    #status-msg {
+      display: none; margin: 8px 12px; padding: 12px 16px;
+      border-radius: 8px; font-size: 14px; font-weight: 500;
+    }
+    #status-msg.loading { background: #e8f0fe; color: var(--primary); }
+    #status-msg.success { background: #e6f4ea; color: #1e7e34; }
+    #status-msg.error { background: #fce8e6; color: #c62828; }
+
+    /* DIVIDER */
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* SETUP */
+    #setup-screen {
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px; gap: 16px;
+    }
+    .setup-title { font-size: 20px; font-weight: 700; }
+    .setup-sub { font-size: 14px; color: var(--text2); text-align: center; line-height: 1.5; }
+    .btn-primary {
+      width: 100%; max-width: 320px; padding: 14px;
+      background: var(--primary); color: white; border: none; border-radius: 24px;
+      font-size: 16px; font-weight: 500; cursor: pointer;
+    }
+    .btn-settings {
+      background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 4px 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- SETUP API KEY -->
+<div id="setup-screen">
+  <div class="login-logo">🔑</div>
+  <div class="setup-title">Configurazione iniziale</div>
+  <div class="setup-sub">Inserisci la tua API key Anthropic.<br>Verrà salvata solo nel tuo browser, mai online.</div>
+  <input type="password" id="setup-api-key" placeholder="sk-ant-api03-..." style="max-width:320px; width:100%">
+  <button class="btn-primary" onclick="saveApiKey()">Salva e continua</button>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">🧾</div>
+  <div class="login-title">App Spese</div>
+  <div class="login-sub">Accedi con il tuo account Google<br>per iniziare a registrare le spese</div>
+  <button class="btn-google" onclick="signIn()">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Accedi con Google
+  </button>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="header">
+    <span class="header-title">🧾 App Spese</span>
+    <div style="display:flex;gap:4px">
+      <button class="btn-settings" onclick="openSettings()" title="Impostazioni">⚙️</button>
+      <button class="btn-logout" onclick="signOut()">Esci</button>
+    </div>
+  </div>
+
+  <div id="status-msg"></div>
+
+  <!-- SCAN (solo Lavoro Rimborso) -->
+  <div class="card" id="scan-section" style="display:none">
+    <div class="card-title">📷 Scansione Scontrino</div>
+    <div class="scan-area" onclick="document.getElementById('camera-input').click()">
+      <div class="scan-icon">📸</div>
+      <div class="scan-text">Tocca per fotografare lo scontrino</div>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="onImageSelected(event)">
+    <img id="image-preview" alt="Anteprima scontrino">
+    <button id="analyze-btn" onclick="analyzeWithClaude()">✨ Analizza con AI</button>
+  </div>
+
+  <!-- FORM -->
+  <div class="card">
+    <div class="card-title">📝 Dati Spesa</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Data <span class="req">*</span></label>
+        <input type="date" id="data">
+      </div>
+      <div class="field">
+        <label>Importo (€) <span class="req">*</span> <span class="ai-badge" id="importo-ai" style="display:none">✨ AI</span></label>
+        <input type="number" id="importo" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Categoria <span class="req">*</span></label>
+      <select id="categoria" onchange="onCategoriaChange()">
+        <option value="">-- Seleziona --</option>
+        <option>Personale</option>
+        <option>Lavoro</option>
+        <option>Lavoro Rimborso</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Tipologia <span class="req">*</span></label>
+      <select id="tipologia">
+        <option value="">-- Seleziona categoria prima --</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Fornitore <span class="ai-badge" id="fornitore-ai" style="display:none">✨ AI</span></label>
+      <input type="text" id="fornitore" placeholder="es. Autogrill, Hotel Roma...">
+    </div>
+
+    <div class="field">
+      <label>Cliente</label>
+      <input type="text" id="cliente" placeholder="Digita o scegli dalla lista" list="clienti-list" autocomplete="off">
+      <datalist id="clienti-list"></datalist>
+    </div>
+
+    <div class="field">
+      <label>Note <span class="ai-badge" id="note-ai" style="display:none">✨ AI</span></label>
+      <textarea id="note" placeholder="Note aggiuntive..."></textarea>
+    </div>
+  </div>
+
+  <button id="submit-btn" onclick="submitExpense()">💾 Salva Spesa</button>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async onload="initGoogleAuth()"></script>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const CONFIG = {
+  GOOGLE_CLIENT_ID: '466848174577-aa3bh5k27pubjn6schd8l9o2hcddls28.apps.googleusercontent.com',
+  SPREADSHEET_ID: '18bPyEftbtk5IQ8NiH5Q6yAfvbzBOI7dOzkmILsBrq_M',
+  SHEET_NAME:     'DBs_Spese',
+  get ANTHROPIC_KEY() { return localStorage.getItem('anthropic_key') || ''; }
+};
+
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+const CATEGORIE = {
+  'Personale':       ['Vestiti','Varie','Risparmio','Salute','Pranzi/Cene/Merende','Gatti','Regali','Vacanze','Cellulare','Alimentari','Gite/Eventi','Attrezzature','Moto','Re.Source','Abbonamenti','Grotta','Bici','Alpinismo'],
+  'Lavoro':          ['Stipendio','Riscatto Laurea','Pranzo Ufficio','Treno Ufficio'],
+  'Lavoro Rimborso': ['Pedaggi Auto','Carburante','Auto','Rimborso km','Rimborso Spese','Vitto/Alloggio/Viaggio']
+};
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let googleToken   = null;
+let tokenClient   = null;
+let capturedImage = null; // { base64, blob, type }
+
+// ─── SETUP API KEY ─────────────────────────────────────────────────────────
+function checkSetup() {
+  if (!localStorage.getItem('anthropic_key')) {
+    document.getElementById('setup-screen').style.display = 'flex';
+    document.getElementById('login-screen').style.display = 'none';
+  }
+}
+
+function saveApiKey() {
+  const key = document.getElementById('setup-api-key').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    alert('Chiave non valida. Deve iniziare con sk-ant-');
+    return;
+  }
+  localStorage.setItem('anthropic_key', key);
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function openSettings() {
+  const key = prompt('API key Anthropic attuale:\n(lascia vuoto per annullare)', localStorage.getItem('anthropic_key') || '');
+  if (key && key.trim()) {
+    localStorage.setItem('anthropic_key', key.trim());
+    alert('✅ API key aggiornata');
+  }
+}
+
+// ─── AUTH ──────────────────────────────────────────────────────────────────
+function initGoogleAuth() {
+  checkSetup();
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+    callback: (resp) => {
+      if (resp.error) { showStatus('Errore autenticazione: ' + resp.error, 'error'); return; }
+      googleToken = resp.access_token;
+      showApp();
+      loadClienti();
+    }
+  });
+}
+
+function signIn()  { tokenClient.requestAccessToken(); }
+function signOut() {
+  if (googleToken) google.accounts.oauth2.revoke(googleToken);
+  googleToken = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display   = 'none';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display   = 'block';
+  document.getElementById('data').value = todayISO();
+}
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+function todayISO() { return new Date().toISOString().split('T')[0]; }
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className   = 'status-msg ' + type;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+// ─── CATEGORIA / TIPOLOGIA ─────────────────────────────────────────────────
+function onCategoriaChange() {
+  const cat    = document.getElementById('categoria').value;
+  const tipSel = document.getElementById('tipologia');
+  tipSel.innerHTML = '<option value="">-- Seleziona --</option>';
+
+  (CATEGORIE[cat] || []).forEach(t => {
+    const o = document.createElement('option');
+    o.value = o.textContent = t;
+    tipSel.appendChild(o);
+  });
+
+  document.getElementById('scan-section').style.display =
+    cat === 'Lavoro Rimborso' ? 'block' : 'none';
+}
+
+// ─── CAMERA ────────────────────────────────────────────────────────────────
+function onImageSelected(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64 = e.target.result.split(',')[1];
+    capturedImage = { base64, blob: file, type: file.type };
+    const preview = document.getElementById('image-preview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    document.getElementById('analyze-btn').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── CLAUDE API ────────────────────────────────────────────────────────────
+async function analyzeWithClaude() {
+  if (!capturedImage) return;
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  showStatus('⏳ Analisi scontrino in corso...', 'loading');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CONFIG.ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-allow-unsafe-browser': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 512,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: capturedImage.type, data: capturedImage.base64 } },
+            { type: 'text',  text:
+              'Analizza questo scontrino/ricevuta italiano. ' +
+              'Rispondi SOLO con un oggetto JSON valido, nessun testo aggiuntivo prima o dopo. ' +
+              'Formato: {"fornitore":"nome negozio o azienda","importo":0.00,"data":"YYYY-MM-DD","note":"descrizione breve della spesa"} ' +
+              'Se un campo non è leggibile usa null.'
+            }
+          ]
+        }]
+      })
+    });
+
+    if (!resp.ok) throw new Error('Errore API ' + resp.status);
+    const data = await resp.json();
+    const text = data.content[0].text;
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Risposta AI non valida');
+    const ai = JSON.parse(match[0]);
+
+    if (ai.fornitore) { document.getElementById('fornitore').value = ai.fornitore; document.getElementById('fornitore-ai').style.display = 'inline-flex'; }
+    if (ai.importo)   { document.getElementById('importo').value   = ai.importo;   document.getElementById('importo-ai').style.display  = 'inline-flex'; }
+    if (ai.data)      { document.getElementById('data').value      = ai.data; }
+    if (ai.note)      { document.getElementById('note').value      = ai.note;      document.getElementById('note-ai').style.display     = 'inline-flex'; }
+
+    showStatus('✅ Dati estratti dallo scontrino — verifica e correggi se necessario', 'success');
+  } catch (err) {
+    showStatus('Errore analisi AI: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── AUTOCOMPLETE CLIENTI ──────────────────────────────────────────────────
+async function loadClienti() {
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(CONFIG.SHEET_NAME + '!F:F')}`;
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + googleToken } });
+    const data = await resp.json();
+    if (!data.values) return;
+    const unique = [...new Set(data.values.flat().filter(v => v && v !== 'Cliente'))];
+    const dl = document.getElementById('clienti-list');
+    dl.innerHTML = '';
+    unique.forEach(c => { const o = document.createElement('option'); o.value = c; dl.appendChild(o); });
+  } catch (_) {}
+}
+
+// ─── SUBMIT ────────────────────────────────────────────────────────────────
+async function submitExpense() {
+  const data      = document.getElementById('data').value;
+  const categoria = document.getElementById('categoria').value;
+  const tipologia = document.getElementById('tipologia').value;
+  const fornitore = document.getElementById('fornitore').value;
+  const importo   = document.getElementById('importo').value;
+  const cliente   = document.getElementById('cliente').value;
+  const note      = document.getElementById('note').value;
+
+  if (!data || !categoria || !tipologia || !importo) {
+    showStatus('⚠️ Compila i campi obbligatori: Data, Categoria, Tipologia, Importo', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+
+  try {
+    let giustificativo = '';
+
+    if (categoria === 'Lavoro Rimborso' && capturedImage) {
+      showStatus('⏳ Caricamento foto su Drive...', 'loading');
+      const filename = buildFilename(data, cliente, tipologia);
+      giustificativo = await uploadToDrive(capturedImage.blob, filename, data);
+    }
+
+    showStatus('⏳ Salvataggio nel foglio...', 'loading');
+    await appendToSheet([data, fornitore, parseFloat(importo) || importo, categoria, tipologia, cliente, note, giustificativo]);
+
+    showStatus('✅ Spesa salvata!', 'success');
+    resetForm();
+    loadClienti();
+  } catch (err) {
+    showStatus('❌ Errore: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function buildFilename(data, cliente, tipologia) {
+  const d  = data.replace(/-/g, '');
+  const c  = (cliente   || 'NoCliente').replace(/[^a-zA-Z0-9]/g, '_');
+  const t  = (tipologia || 'Spesa'    ).replace(/[^a-zA-Z0-9]/g, '_');
+  return `${d}_${c}_${t}.jpg`;
+}
+
+async function appendToSheet(values) {
+  const range = encodeURIComponent(CONFIG.SHEET_NAME + '!A1');
+  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const resp  = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + googleToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [values] })
+  });
+  if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || resp.status); }
+}
+
+// ─── DRIVE ─────────────────────────────────────────────────────────────────
+async function findOrCreateFolder(name, parentId) {
+  let q = `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  if (parentId) q += ` and '${parentId}' in parents`;
+
+  const sr = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`, {
+    headers: { Authorization: 'Bearer ' + googleToken }
+  });
+  const sd = await sr.json();
+  if (sd.files && sd.files.length > 0) return sd.files[0].id;
+
+  const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + googleToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : [] })
+  });
+  const cd = await cr.json();
+  return cd.id;
+}
+
+async function uploadToDrive(blob, filename, dateStr) {
+  const year      = dateStr.substring(0, 4);
+  const monthName = MESI[parseInt(dateStr.substring(5, 7)) - 1];
+
+  const speseId = await findOrCreateFolder('Spese',          null);
+  const giustId = await findOrCreateFolder('Giustificativi', speseId);
+  const yearId  = await findOrCreateFolder(year,             giustId);
+  const monthId = await findOrCreateFolder(monthName,        yearId);
+
+  const meta = JSON.stringify({ name: filename, parents: [monthId] });
+  const form = new FormData();
+  form.append('metadata', new Blob([meta], { type: 'application/json' }));
+  form.append('file', blob);
+
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + googleToken },
+    body: form
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error?.message || 'Upload Drive fallito');
+  return data.webViewLink || '';
+}
+
+// ─── RESET ─────────────────────────────────────────────────────────────────
+function resetForm() {
+  ['fornitore','importo','cliente','note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('categoria').value = '';
+  document.getElementById('tipologia').innerHTML = '<option value="">-- Seleziona categoria prima --</option>';
+  document.getElementById('data').value = todayISO();
+  capturedImage = null;
+  document.getElementById('image-preview').style.display  = 'none';
+  document.getElementById('analyze-btn').style.display    = 'none';
+  document.getElementById('scan-section').style.display   = 'none';
+  ['importo-ai','fornitore-ai','note-ai'].forEach(id => document.getElementById(id).style.display = 'none');
+}
+</script>
+</body>
+</html>
