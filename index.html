@@ -162,7 +162,7 @@
   <div id="status-msg"></div>
 
   <!-- SCAN (solo Lavoro Rimborso) -->
-  <div class="card" id="scan-section" style="display:none">
+  <div class="card" id="scan-section">
     <div class="card-title">📷 Scansione Scontrino</div>
     <a id="drive-scan-btn" href="https://drive.google.com/drive/?action=scan" target="_blank"
        style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#1a73e8;color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">
@@ -197,7 +197,7 @@
       <label>Categoria <span class="req">*</span></label>
       <select id="categoria" onchange="onCategoriaChange()">
         <option value="">-- Seleziona --</option>
-        <option>Personale</option>
+        <option selected>Personale</option>
         <option>Lavoro</option>
         <option>Lavoro Rimborso</option>
       </select>
@@ -237,7 +237,8 @@ const CONFIG = {
   GOOGLE_CLIENT_ID: '466848174577-aa3bh5k27pubjn6schd8l9o2hcddls28.apps.googleusercontent.com',
   SPREADSHEET_ID: '18bPyEftbtk5IQ8NiH5Q6yAfvbzBOI7dOzkmILsBrq_M',
   SHEET_NAME:     'DBs_Spese',
-  SPESE_FOLDER_ID: '1jwiG0oq3hrwAsANP2OTLPfiaL3xM6gqo',
+  SPESE_FOLDER_ID: '1CcOhHM6ojHkFuOJGKeBi6ZlfVZyf2boC',
+  TEMP_FOLDER_ID:  '1jwiG0oq3hrwAsANP2OTLPfiaL3xM6gqo',
   get ANTHROPIC_KEY() { return localStorage.getItem('anthropic_key') || ''; }
 };
 
@@ -315,6 +316,8 @@ function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-screen').style.display   = 'block';
   document.getElementById('data').value = todayISO();
+  document.getElementById('categoria').value = 'Personale';
+  onCategoriaChange();
 }
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────
@@ -340,31 +343,15 @@ function onCategoriaChange() {
     tipSel.appendChild(o);
   });
 
-  document.getElementById('scan-section').style.display =
-    cat === 'Lavoro Rimborso' ? 'block' : 'none';
 }
 
 // ─── LOAD LAST SCAN FROM DRIVE ────────────────────────────────────────────
 async function loadLastScan() {
   showStatus('⏳ Cerco ultima scansione in Drive...', 'loading');
   try {
-    // Trova ID cartella Temp (dentro Spese)
-    let tempId = localStorage.getItem('temp_folder_id');
-    if (!tempId) {
-      const tq = encodeURIComponent(`'${CONFIG.SPESE_FOLDER_ID}' in parents and name='Temp' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-      const tr = await fetch(`https://www.googleapis.com/drive/v3/files?q=${tq}&fields=files(id,name)`,
-        { headers: { Authorization: 'Bearer ' + googleToken } });
-      const td = await tr.json();
-      if (td.files && td.files.length > 0) {
-        tempId = td.files[0].id;
-        localStorage.setItem('temp_folder_id', tempId);
-      } else {
-        showStatus('⚠️ Cartella Spese/Temp non trovata. Creala in Drive.', 'error');
-        return;
-      }
-    }
+    const tempId = CONFIG.TEMP_FOLDER_ID;
 
-    // Cerca l'ultimo PDF in Temp
+    // Cerca l'ultimo file in Temp
     const q = encodeURIComponent(`'${tempId}' in parents and trashed=false`);
     const resp = await fetch(
       `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime+desc&pageSize=1&fields=files(id,name,createdTime,mimeType,parents)`,
@@ -405,6 +392,9 @@ async function loadLastScan() {
       badge.style.display = 'block';
       document.getElementById('image-preview').style.display = 'none';
       document.getElementById('analyze-btn').style.display = 'block';
+      // Auto-imposta Lavoro Rimborso
+      document.getElementById('categoria').value = 'Lavoro Rimborso';
+      onCategoriaChange();
       showStatus('✅ Scansione caricata', 'success');
     };
     reader.readAsDataURL(blob);
@@ -654,8 +644,8 @@ async function uploadToDrive(blob, filename, dateStr) {
 // ─── RESET ─────────────────────────────────────────────────────────────────
 function resetForm() {
   ['fornitore','importo','cliente','note'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('categoria').value = '';
-  document.getElementById('tipologia').innerHTML = '<option value="">-- Seleziona categoria prima --</option>';
+  document.getElementById('categoria').value = 'Personale';
+  onCategoriaChange();
   document.getElementById('data').value = todayISO();
   capturedImage = null;
   document.getElementById('image-preview').style.display  = 'none';
