@@ -237,6 +237,7 @@ const CONFIG = {
   GOOGLE_CLIENT_ID: '466848174577-aa3bh5k27pubjn6schd8l9o2hcddls28.apps.googleusercontent.com',
   SPREADSHEET_ID: '18bPyEftbtk5IQ8NiH5Q6yAfvbzBOI7dOzkmILsBrq_M',
   SHEET_NAME:     'DBs_Spese',
+  SPESE_FOLDER_ID: '1jwiG0oq3hrwAsANP2OTLPfiaL3xM6gqo',
   get ANTHROPIC_KEY() { return localStorage.getItem('anthropic_key') || ''; }
 };
 
@@ -285,7 +286,7 @@ function initGoogleAuth() {
   checkSetup();
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
     callback: (resp) => {
       if (resp.error) { showStatus('Errore autenticazione: ' + resp.error, 'error'); return; }
       googleToken = resp.access_token;
@@ -341,7 +342,7 @@ async function loadLastScan() {
   showStatus('⏳ Cerco ultima scansione in Spese/Temp...', 'loading');
   try {
     // Find Spese/Temp folder
-    const speseId = await findOrCreateFolder('Spese', null);
+    const speseId = CONFIG.SPESE_FOLDER_ID;
     const tempId  = await findOrCreateFolder('Temp', speseId);
 
     // Get most recent file in Temp
@@ -590,7 +591,7 @@ async function uploadToDrive(blob, filename, dateStr) {
   const year      = dateStr.substring(0, 4);
   const monthName = MESI[parseInt(dateStr.substring(5, 7)) - 1];
 
-  const speseId = await findOrCreateFolder('Spese',          null);
+  const speseId = CONFIG.SPESE_FOLDER_ID;
   const giustId = await findOrCreateFolder('Giustificativi', speseId);
   const yearId  = await findOrCreateFolder(year,             giustId);
   const monthId = await findOrCreateFolder(monthName,        yearId);
