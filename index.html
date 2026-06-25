@@ -155,20 +155,6 @@
 </head>
 <body>
 
-<!-- CAMERA MODAL -->
-<div id="camera-modal">
-  <video id="camera-video" autoplay playsinline muted></video>
-  <div id="capture-preview-wrap">
-    <img id="capture-preview-img" alt="Anteprima">
-  </div>
-  <div class="camera-overlay">
-    <button class="btn-cam-cancel" id="cam-btn-left" onclick="cancelCamera()">Annulla</button>
-    <button class="btn-capture" id="cam-btn-capture" onclick="capturePhoto()"></button>
-    <button class="btn-cam-confirm" id="cam-btn-confirm" style="display:none" onclick="confirmPhoto()">Usa foto</button>
-    <div id="cam-btn-right" style="width:60px"></div>
-  </div>
-</div>
-<canvas id="capture-canvas" style="display:none"></canvas>
 
 <!-- SETUP API KEY -->
 <div id="setup-screen">
@@ -202,25 +188,16 @@
 
   <div id="status-msg"></div>
 
-  <!-- SCAN (solo Lavoro Rimborso) -->
-  <div class="card" id="scan-section">
-    <div class="card-title">📷 Scansione Scontrino</div>
-    <button onclick="document.getElementById('file-input').click()" style="width:100%;padding:16px;background:#1a73e8;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:10px">
-      📷 Apri Fotocamera / Scanner
-    </button>
-    <input type="file" id="file-input" accept="image/*,application/pdf" onchange="onImageSelected(event)" style="display:none">
-    <button onclick="loadLastScan()" style="width:100%;padding:12px;border:1.5px solid #1a73e8;background:white;color:#1a73e8;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer">
-      ⬇️ Carica ultima scansione da Spese/Temp
-    </button>
-    <img id="image-preview" alt="Anteprima scontrino">
-    <iframe id="pdf-preview" style="display:none;width:100%;height:300px;border:none;border-radius:8px;margin-top:12px" allowfullscreen></iframe>
-    <div id="pdf-badge" style="display:none;text-align:center;padding:8px 12px;background:#e8f0fe;border-radius:8px;margin-top:8px;color:#1a73e8;font-size:13px"></div>
-    <button id="analyze-btn" onclick="analyzeWithClaude()" style="display:none">✨ Analizza con AI</button>
-  </div>
-
   <!-- FORM -->
   <div class="card">
-    <div class="card-title">📝 Dati Spesa</div>
+
+    <button onclick="openNativeCamera()" style="width:100%;padding:14px;background:#1a73e8;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px">
+      📷 Scansiona Scontrino
+    </button>
+
+    <div id="scan-status" style="display:none;padding:8px 12px;background:#e8f0fe;border-radius:8px;margin-bottom:10px;color:#1a73e8;font-size:13px"></div>
+    <img id="image-preview" alt="Anteprima" style="display:none;width:100%;border-radius:8px;margin-bottom:10px">
+    <button id="analyze-btn" onclick="analyzeWithClaude()" style="display:none;width:100%;margin-bottom:12px;background:#1a73e8;color:white;border:none;border-radius:24px;padding:11px;font-size:15px;font-weight:500;cursor:pointer">✨ Analizza con AI</button>
 
     <div class="row2">
       <div class="field">
@@ -233,21 +210,28 @@
       </div>
     </div>
 
-    <div class="field">
-      <label>Categoria <span class="req">*</span></label>
-      <select id="categoria" onchange="onCategoriaChange()">
-        <option value="">-- Seleziona --</option>
-        <option selected>Personale</option>
-        <option>Lavoro</option>
-        <option>Lavoro Rimborso</option>
-      </select>
+    <div class="row2">
+      <div class="field">
+        <label>Categoria <span class="req">*</span></label>
+        <select id="categoria" onchange="onCategoriaChange()">
+          <option value="">-- Seleziona --</option>
+          <option selected>Personale</option>
+          <option>Lavoro</option>
+          <option>Lavoro Rimborso</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Tipologia <span class="req">*</span></label>
+        <select id="tipologia">
+          <option value="">--</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
-      <label>Tipologia <span class="req">*</span></label>
-      <select id="tipologia">
-        <option value="">-- Seleziona categoria prima --</option>
-      </select>
+      <label>Cliente</label>
+      <input type="text" id="cliente" placeholder="Digita o scegli" list="clienti-list" autocomplete="off">
+      <datalist id="clienti-list"></datalist>
     </div>
 
     <div class="field">
@@ -256,14 +240,8 @@
     </div>
 
     <div class="field">
-      <label>Cliente</label>
-      <input type="text" id="cliente" placeholder="Digita o scegli dalla lista" list="clienti-list" autocomplete="off">
-      <datalist id="clienti-list"></datalist>
-    </div>
-
-    <div class="field">
       <label>Note <span class="ai-badge" id="note-ai" style="display:none">✨ AI</span></label>
-      <textarea id="note" placeholder="Note aggiuntive..."></textarea>
+      <textarea id="note" placeholder="Note aggiuntive..." style="min-height:52px"></textarea>
     </div>
   </div>
 
@@ -288,7 +266,7 @@ const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','
 const CATEGORIE = {
   'Personale':       ['Vestiti','Varie','Risparmio','Salute','Pranzi/Cene/Merende','Gatti','Regali','Vacanze','Cellulare','Alimentari','Gite/Eventi','Attrezzature','Moto','Re.Source','Abbonamenti','Grotta','Bici','Alpinismo'],
   'Lavoro':          ['Stipendio','Riscatto Laurea','Pranzo Ufficio','Treno Ufficio'],
-  'Lavoro Rimborso': ['Pedaggi Auto','Carburante','Auto','Rimborso km','Rimborso Spese','Vitto/Alloggio/Viaggio']
+  'Lavoro Rimborso': ['Pedaggi Auto','Carburante','Auto','Rimborso km','Rimborso Spese','Vitto','Alloggio','Viaggio']
 };
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
@@ -324,40 +302,80 @@ function openSettings() {
 }
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
+let refreshTimer = null;
+
+function getCachedToken() {
+  try {
+    const c = JSON.parse(localStorage.getItem('gtoken') || 'null');
+    if (c && c.exp > Date.now() + 60000) return c.token;
+  } catch(_) {}
+  return null;
+}
+
+function setCachedToken(token) {
+  const exp = Date.now() + 3500000; // ~58 min
+  localStorage.setItem('gtoken', JSON.stringify({ token, exp }));
+  // Rinnova silenziosamente 5 minuti prima della scadenza
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => silentRefresh(), 3200000); // ~53 min
+}
+
+function silentRefresh() {
+  if (!tokenClient) return;
+  tokenClient.requestAccessToken(); // prompt:'' → completamente silenzioso
+}
+
 function initGoogleAuth() {
   checkSetup();
-  const hint = localStorage.getItem('user_email') || '';
+  const cached = getCachedToken();
+  const hint   = localStorage.getItem('user_email') || '';
+
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
-    prompt: hint ? '' : 'select_account',
+    scope:     'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
+    prompt:    hint ? '' : 'select_account',
     login_hint: hint,
     callback: async (resp) => {
-      if (resp.error) { showStatus('Errore autenticazione: ' + resp.error, 'error'); return; }
+      if (resp.error) {
+        if (!googleToken) showStatus('Errore autenticazione: ' + resp.error, 'error');
+        return;
+      }
       googleToken = resp.access_token;
-      // Salva email utente per login silenzioso futuro
-      if (!localStorage.getItem('user_email')) {
+      setCachedToken(googleToken);
+      if (!hint) {
         try {
-          const info = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
-            headers: { Authorization: 'Bearer ' + googleToken }
-          }).then(r => r.json());
+          const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+            { headers: { Authorization: 'Bearer ' + googleToken } }).then(r => r.json());
           if (info.email) localStorage.setItem('user_email', info.email);
         } catch(_) {}
       }
-      localStorage.setItem('was_logged_in', '1');
-      showApp();
-      loadClienti();
+      if (document.getElementById('app-screen').style.display === 'none') {
+        showApp(); loadClienti();
+      }
     }
   });
-  if (localStorage.getItem('was_logged_in')) {
+
+  if (cached) {
+    // Token valido: mostra app subito e pianifica refresh silenzioso
+    googleToken = cached;
+    const remaining = JSON.parse(localStorage.getItem('gtoken')).exp - Date.now() - 300000;
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => silentRefresh(), Math.max(remaining, 0));
+    showApp();
+    loadClienti();
+  } else if (hint) {
+    // Token scaduto ma email salvata: refresh silenzioso (nessun popup)
     tokenClient.requestAccessToken();
   }
+  // Altrimenti mostra login screen (prima volta)
 }
 
 function signIn()  { tokenClient.requestAccessToken(); }
 function signOut() {
   if (googleToken) google.accounts.oauth2.revoke(googleToken);
   googleToken = null;
+  localStorage.removeItem('gtoken');
+  localStorage.removeItem('user_email');
   localStorage.removeItem('was_logged_in');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-screen').style.display   = 'none';
@@ -454,100 +472,66 @@ async function loadLastScan() {
   }
 }
 
-// ─── CAMERA UI ─────────────────────────────────────────────────────────────
-let cameraStream = null;
+// ─── CAMERA NATIVA (Android Intent) ───────────────────────────────────────
+function openNativeCamera() {
+  // Imposta subito Lavoro Rimborso
+  document.getElementById('categoria').value = 'Lavoro Rimborso';
+  onCategoriaChange();
+  // Apre l'app fotocamera nativa come processo separato
+  window.location.href = 'intent:#Intent;action=android.media.action.STILL_IMAGE_CAMERA;end';
+}
 
-async function openCamera() {
-  const modal = document.getElementById('camera-modal');
-  const video = document.getElementById('camera-video');
-  modal.classList.add('active');
-  document.getElementById('capture-preview-wrap').style.display = 'none';
-  document.getElementById('cam-btn-capture').style.display = 'block';
-  document.getElementById('cam-btn-confirm').style.display = 'none';
-  document.getElementById('cam-btn-left').textContent = 'Annulla';
-  document.getElementById('cam-btn-left').onclick = cancelCamera;
-  document.getElementById('cam-btn-right').innerHTML = '';
+// Quando l'utente torna sull'app, carica automaticamente da Temp
+let lastTempCheck = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && googleToken) {
+    const now = Date.now();
+    if (now - lastTempCheck > 5000) { // evita check multipli ravvicinati
+      lastTempCheck = now;
+      autoLoadFromTemp();
+    }
+  }
+});
 
+async function autoLoadFromTemp() {
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false
-    });
-    video.srcObject = cameraStream;
-  } catch (err) {
-    modal.classList.remove('active');
-    showStatus('❌ Fotocamera non disponibile: ' + err.message, 'error');
-  }
-}
+    const q = encodeURIComponent(`'${CONFIG.TEMP_FOLDER_ID}' in parents and trashed=false`);
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime+desc&pageSize=1&fields=files(id,name,createdTime,mimeType)`,
+      { headers: { Authorization: 'Bearer ' + googleToken } }
+    );
+    const data = await resp.json();
+    if (!data.files || data.files.length === 0) return;
 
-function capturePhoto() {
-  const video  = document.getElementById('camera-video');
-  const canvas = document.getElementById('capture-canvas');
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
+    const file = data.files[0];
+    // Carica solo se il file è stato creato negli ultimi 10 minuti
+    const age = Date.now() - new Date(file.createdTime).getTime();
+    if (age > 600000) return;
 
-  const previewImg = document.getElementById('capture-preview-img');
-  previewImg.src = canvas.toDataURL('image/jpeg', 0.9);
-  document.getElementById('capture-preview-wrap').style.display = 'block';
-
-  document.getElementById('cam-btn-capture').style.display = 'none';
-  document.getElementById('cam-btn-confirm').style.display = 'block';
-  document.getElementById('cam-btn-left').textContent = 'Riprendi';
-  document.getElementById('cam-btn-left').onclick = retakePhoto;
-}
-
-function retakePhoto() {
-  document.getElementById('capture-preview-wrap').style.display = 'none';
-  document.getElementById('cam-btn-capture').style.display = 'block';
-  document.getElementById('cam-btn-confirm').style.display = 'none';
-  document.getElementById('cam-btn-left').textContent = 'Annulla';
-  document.getElementById('cam-btn-left').onclick = cancelCamera;
-}
-
-function confirmPhoto() {
-  const canvas = document.getElementById('capture-canvas');
-  const MAX = 1280;
-  let w = canvas.width, h = canvas.height;
-  if (w > MAX || h > MAX) {
-    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-    else        { w = Math.round(w * MAX / h); h = MAX; }
-  }
-  const out = document.createElement('canvas');
-  out.width = w; out.height = h;
-  out.getContext('2d').drawImage(canvas, 0, 0, w, h);
-
-  out.toBlob(blob => {
+    const dlResp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + googleToken } }
+    );
+    const blob = await dlResp.blob();
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target.result.split(',')[1];
-      capturedImage = { base64, blob, type: 'image/jpeg', driveFileId: null };
-
+      capturedImage = { base64, blob, type: file.mimeType, driveFileId: file.id, driveParentId: CONFIG.TEMP_FOLDER_ID };
       const preview = document.getElementById('image-preview');
       preview.src = e.target.result;
       preview.style.display = 'block';
-      document.getElementById('pdf-preview').style.display = 'none';
-      document.getElementById('pdf-badge').style.display = 'none';
       document.getElementById('analyze-btn').style.display = 'block';
-      showStatus('✅ Foto acquisita — premi Analizza con AI', 'success');
+      const s = document.getElementById('scan-status');
+      s.textContent = `📄 ${file.name} — premi Analizza con AI`;
+      s.style.display = 'block';
+      document.getElementById('categoria').value = 'Lavoro Rimborso';
+      onCategoriaChange();
     };
     reader.readAsDataURL(blob);
-  }, 'image/jpeg', 0.85);
-
-  stopCamera();
-  document.getElementById('camera-modal').classList.remove('active');
+  } catch(_) {}
 }
 
-function cancelCamera() {
-  stopCamera();
-  document.getElementById('camera-modal').classList.remove('active');
-}
-
-function stopCamera() {
-  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
-}
-
-// ─── LEGACY FILE INPUT (fallback) ──────────────────────────────────────────
+// ─── FILE INPUT (non usato, mantenuto per compatibilità) ───────────────────
 function onImageSelected(evt) {
   const file = evt.target.files[0];
   if (!file) return;
