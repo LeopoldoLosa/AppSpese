@@ -233,16 +233,6 @@
       <input type="text" id="cliente" placeholder="Digita o scegli" list="clienti-list" autocomplete="off">
       <datalist id="clienti-list"></datalist>
     </div>
-
-    <div class="field">
-      <label>Fornitore <span class="ai-badge" id="fornitore-ai" style="display:none">✨ AI</span></label>
-      <input type="text" id="fornitore" placeholder="es. Autogrill, Hotel Roma...">
-    </div>
-
-    <div class="field">
-      <label>Note <span class="ai-badge" id="note-ai" style="display:none">✨ AI</span></label>
-      <textarea id="note" placeholder="Note aggiuntive..." style="min-height:52px"></textarea>
-    </div>
   </div>
 
   <button id="submit-btn" onclick="submitExpense()">💾 Salva Spesa</button>
@@ -639,8 +629,8 @@ async function analyzeWithClaude() {
             { type: 'text',  text:
               'Analizza questo scontrino/ricevuta italiano. ' +
               'Rispondi SOLO con un oggetto JSON valido, nessun testo aggiuntivo prima o dopo. ' +
-              'Formato: {"fornitore":"nome negozio o azienda","importo":0.00,"data":"YYYY-MM-DD","note":"descrizione breve della spesa"} ' +
-              'Se un campo non è leggibile usa null.'
+              'Formato: {"importo":0.00,"data":"YYYY-MM-DD"} ' +
+              'importo = totale pagato. Se un campo non è leggibile usa null.'
             }
           ]
         }]
@@ -654,10 +644,8 @@ async function analyzeWithClaude() {
     if (!match) throw new Error('Risposta AI non valida');
     const ai = JSON.parse(match[0]);
 
-    if (ai.fornitore) { document.getElementById('fornitore').value = ai.fornitore; document.getElementById('fornitore-ai').style.display = 'inline-flex'; }
     if (ai.importo)   { document.getElementById('importo').value   = ai.importo;   document.getElementById('importo-ai').style.display  = 'inline-flex'; }
     if (ai.data)      { document.getElementById('data').value      = ai.data; }
-    if (ai.note)      { document.getElementById('note').value      = ai.note;      document.getElementById('note-ai').style.display     = 'inline-flex'; }
 
     showStatus('✅ Dati estratti dallo scontrino — verifica e correggi se necessario', 'success');
   } catch (err) {
@@ -670,7 +658,7 @@ async function analyzeWithClaude() {
 // ─── AUTOCOMPLETE CLIENTI ──────────────────────────────────────────────────
 async function loadClienti() {
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(CONFIG.SHEET_NAME + '!F:F')}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(CONFIG.SHEET_NAME + '!E:E')}`;
     const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + googleToken } });
     const data = await resp.json();
     if (!data.values) return;
@@ -686,10 +674,8 @@ async function submitExpense() {
   const data      = document.getElementById('data').value;
   const categoria = document.getElementById('categoria').value;
   const tipologia = document.getElementById('tipologia').value;
-  const fornitore = document.getElementById('fornitore').value;
   const importo   = document.getElementById('importo').value;
   const cliente   = document.getElementById('cliente').value;
-  const note      = document.getElementById('note').value;
 
   if (!data || !categoria || !tipologia || !importo) {
     showStatus('⚠️ Compila i campi obbligatori: Data, Categoria, Tipologia, Importo', 'error');
@@ -714,7 +700,7 @@ async function submitExpense() {
     }
 
     showStatus('⏳ Salvataggio nel foglio...', 'loading');
-    await appendToSheet([data, fornitore, parseFloat(importo) || importo, categoria, tipologia, cliente, note, giustificativo]);
+    await appendToSheet([data, parseFloat(importo) || importo, categoria, tipologia, cliente]);
 
     showStatus('✅ Spesa salvata!', 'success');
     resetForm();
@@ -805,17 +791,16 @@ async function uploadToDrive(blob, filename, dateStr) {
 
 // ─── RESET ─────────────────────────────────────────────────────────────────
 function resetForm() {
-  ['fornitore','importo','cliente','note'].forEach(id => document.getElementById(id).value = '');
+  ['importo','cliente'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('categoria').value = 'Personale';
   onCategoriaChange();
   document.getElementById('data').value = todayISO();
   capturedImage = null;
   document.getElementById('image-preview').style.display  = 'none';
   document.getElementById('analyze-btn').style.display    = 'none';
-  document.getElementById('scan-section').style.display   = 'none';
-  ['importo-ai','fornitore-ai','note-ai'].forEach(id => document.getElementById(id).style.display = 'none');
-  const badge = document.getElementById('pdf-badge');
-  badge.style.display = 'none'; badge.textContent = '';
+  const ss = document.getElementById('scan-status');
+  if (ss) ss.style.display = 'none';
+  document.getElementById('importo-ai').style.display = 'none';
 }
 </script>
 </body>
