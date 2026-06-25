@@ -110,6 +110,32 @@
     /* DIVIDER */
     .divider { height: 1px; background: var(--border); margin: 4px 0; }
 
+    /* CAMERA UI */
+    #camera-modal {
+      display: none; position: fixed; inset: 0; background: #000; z-index: 200;
+      flex-direction: column; align-items: center; justify-content: flex-end;
+    }
+    #camera-modal.active { display: flex; }
+    #camera-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+    .camera-overlay {
+      position: relative; z-index: 10; width: 100%; padding: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    }
+    .btn-capture {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: white; border: 4px solid rgba(255,255,255,0.5);
+      cursor: pointer; flex-shrink: 0;
+    }
+    .btn-cam-cancel {
+      color: white; background: none; border: none; font-size: 15px; cursor: pointer; width: 60px;
+    }
+    .btn-cam-confirm {
+      color: #4ade80; background: none; border: none; font-size: 15px; font-weight: 600; cursor: pointer; width: 60px;
+    }
+    #capture-preview-wrap { display: none; position: absolute; inset: 0; z-index: 5; }
+    #capture-preview-wrap img { width: 100%; height: 100%; object-fit: contain; background: #000; }
+
     /* SETUP */
     #setup-screen {
       display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -128,6 +154,21 @@
   </style>
 </head>
 <body>
+
+<!-- CAMERA MODAL -->
+<div id="camera-modal">
+  <video id="camera-video" autoplay playsinline muted></video>
+  <div id="capture-preview-wrap">
+    <img id="capture-preview-img" alt="Anteprima">
+  </div>
+  <div class="camera-overlay">
+    <button class="btn-cam-cancel" id="cam-btn-left" onclick="cancelCamera()">Annulla</button>
+    <button class="btn-capture" id="cam-btn-capture" onclick="capturePhoto()"></button>
+    <button class="btn-cam-confirm" id="cam-btn-confirm" style="display:none" onclick="confirmPhoto()">Usa foto</button>
+    <div id="cam-btn-right" style="width:60px"></div>
+  </div>
+</div>
+<canvas id="capture-canvas" style="display:none"></canvas>
 
 <!-- SETUP API KEY -->
 <div id="setup-screen">
@@ -164,17 +205,12 @@
   <!-- SCAN (solo Lavoro Rimborso) -->
   <div class="card" id="scan-section">
     <div class="card-title">📷 Scansione Scontrino</div>
-    <a id="drive-scan-btn" href="https://drive.google.com/drive/?action=scan" target="_blank"
-       style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:#1a73e8;color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">
-      <svg width="20" height="20" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
-      Apri Scanner Google Drive
-    </a>
-    <p style="text-align:center;font-size:12px;color:#5f6368;margin-top:8px">Scansiona lo scontrino in Drive, poi torna qui</p>
-    <button onclick="loadLastScan()" style="width:100%;margin-top:10px;padding:12px;border:1.5px solid #1a73e8;background:white;color:#1a73e8;border-radius:24px;font-size:15px;font-weight:500;cursor:pointer">
-      ⬇️ Carica ultima scansione da Drive
+    <button onclick="openCamera()" style="width:100%;padding:16px;background:#1a73e8;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer">
+      📷 Scansiona Scontrino
     </button>
     <img id="image-preview" alt="Anteprima scontrino">
-    <div id="pdf-badge" style="display:none;text-align:center;padding:12px;background:#e8f0fe;border-radius:8px;margin-top:12px;color:#1a73e8;font-weight:500"></div>
+    <iframe id="pdf-preview" style="display:none;width:100%;height:300px;border:none;border-radius:8px;margin-top:12px" allowfullscreen></iframe>
+    <div id="pdf-badge" style="display:none;text-align:center;padding:8px 12px;background:#e8f0fe;border-radius:8px;margin-top:8px;color:#1a73e8;font-size:13px"></div>
     <button id="analyze-btn" onclick="analyzeWithClaude()" style="display:none">✨ Analizza con AI</button>
   </div>
 
@@ -239,6 +275,7 @@ const CONFIG = {
   SHEET_NAME:     'DBs_Spese',
   SPESE_FOLDER_ID: '1CcOhHM6ojHkFuOJGKeBi6ZlfVZyf2boC',
   TEMP_FOLDER_ID:  '1jwiG0oq3hrwAsANP2OTLPfiaL3xM6gqo',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxmND4OXAswDYC0t1ngOW70Fgwfggux2m9otRFYhg64pOK95jYQNW-McKDcoyBOBr2s/exec',
   get ANTHROPIC_KEY() { return localStorage.getItem('anthropic_key') || ''; }
 };
 
@@ -365,14 +402,15 @@ async function loadLastScan() {
     }
 
     const file = data.files[0];
-    const parentId = file.parents ? file.parents[0] : null;
-
-    // Chiedi conferma mostrando il nome del file trovato
-    const ok = confirm(`Trovato: "${file.name}"\n\nÈ lo scontrino che hai appena scansionato?`);
-    if (!ok) { showStatus('', ''); return; }
 
     showStatus(`⏳ Carico "${file.name}"...`, 'loading');
 
+    // Mostra anteprima Drive nell'iframe (senza scaricare il file)
+    const preview = document.getElementById('pdf-preview');
+    preview.src = `https://drive.google.com/file/d/${file.id}/preview`;
+    preview.style.display = 'block';
+
+    // Scarica il contenuto per l'analisi AI
     const dlResp = await fetch(
       `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
       { headers: { Authorization: 'Bearer ' + googleToken } }
@@ -388,14 +426,13 @@ async function loadLastScan() {
         driveParentId: tempId
       };
       const badge = document.getElementById('pdf-badge');
-      badge.textContent = `📄 "${file.name}" — pronto per l'analisi`;
+      badge.textContent = `📄 ${file.name}`;
       badge.style.display = 'block';
       document.getElementById('image-preview').style.display = 'none';
       document.getElementById('analyze-btn').style.display = 'block';
-      // Auto-imposta Lavoro Rimborso
       document.getElementById('categoria').value = 'Lavoro Rimborso';
       onCategoriaChange();
-      showStatus('✅ Scansione caricata', 'success');
+      showStatus('✅ Scansione caricata — verifica l\'anteprima poi analizza', 'success');
     };
     reader.readAsDataURL(blob);
   } catch(err) {
@@ -403,7 +440,100 @@ async function loadLastScan() {
   }
 }
 
-// ─── CAMERA ────────────────────────────────────────────────────────────────
+// ─── CAMERA UI ─────────────────────────────────────────────────────────────
+let cameraStream = null;
+
+async function openCamera() {
+  const modal = document.getElementById('camera-modal');
+  const video = document.getElementById('camera-video');
+  modal.classList.add('active');
+  document.getElementById('capture-preview-wrap').style.display = 'none';
+  document.getElementById('cam-btn-capture').style.display = 'block';
+  document.getElementById('cam-btn-confirm').style.display = 'none';
+  document.getElementById('cam-btn-left').textContent = 'Annulla';
+  document.getElementById('cam-btn-left').onclick = cancelCamera;
+  document.getElementById('cam-btn-right').innerHTML = '';
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+  } catch (err) {
+    modal.classList.remove('active');
+    showStatus('❌ Fotocamera non disponibile: ' + err.message, 'error');
+  }
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  const previewImg = document.getElementById('capture-preview-img');
+  previewImg.src = canvas.toDataURL('image/jpeg', 0.9);
+  document.getElementById('capture-preview-wrap').style.display = 'block';
+
+  document.getElementById('cam-btn-capture').style.display = 'none';
+  document.getElementById('cam-btn-confirm').style.display = 'block';
+  document.getElementById('cam-btn-left').textContent = 'Riprendi';
+  document.getElementById('cam-btn-left').onclick = retakePhoto;
+}
+
+function retakePhoto() {
+  document.getElementById('capture-preview-wrap').style.display = 'none';
+  document.getElementById('cam-btn-capture').style.display = 'block';
+  document.getElementById('cam-btn-confirm').style.display = 'none';
+  document.getElementById('cam-btn-left').textContent = 'Annulla';
+  document.getElementById('cam-btn-left').onclick = cancelCamera;
+}
+
+function confirmPhoto() {
+  const canvas = document.getElementById('capture-canvas');
+  const MAX = 1280;
+  let w = canvas.width, h = canvas.height;
+  if (w > MAX || h > MAX) {
+    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+    else        { w = Math.round(w * MAX / h); h = MAX; }
+  }
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  out.getContext('2d').drawImage(canvas, 0, 0, w, h);
+
+  out.toBlob(blob => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result.split(',')[1];
+      capturedImage = { base64, blob, type: 'image/jpeg', driveFileId: null };
+
+      const preview = document.getElementById('image-preview');
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      document.getElementById('pdf-preview').style.display = 'none';
+      document.getElementById('pdf-badge').style.display = 'none';
+      document.getElementById('analyze-btn').style.display = 'block';
+      showStatus('✅ Foto acquisita — premi Analizza con AI', 'success');
+    };
+    reader.readAsDataURL(blob);
+  }, 'image/jpeg', 0.85);
+
+  stopCamera();
+  document.getElementById('camera-modal').classList.remove('active');
+}
+
+function cancelCamera() {
+  stopCamera();
+  document.getElementById('camera-modal').classList.remove('active');
+}
+
+function stopCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+}
+
+// ─── LEGACY FILE INPUT (fallback) ──────────────────────────────────────────
 function onImageSelected(evt) {
   const file = evt.target.files[0];
   if (!file) return;
@@ -462,14 +592,9 @@ async function analyzeWithClaude() {
   showStatus('⏳ Analisi scontrino in corso...', 'loading');
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CONFIG.ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-allow-unsafe-browser': 'true'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 512,
