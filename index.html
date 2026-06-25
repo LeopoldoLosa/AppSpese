@@ -191,10 +191,9 @@
   <!-- FORM -->
   <div class="card">
 
-    <button onclick="triggerScan()" style="width:100%;padding:14px;background:#1a73e8;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px">
-      📷 Scansiona / Carica Scontrino
-    </button>
-    <input type="file" id="cam-input" accept="image/*,application/pdf" style="display:none" onchange="onCameraCapture(event)">
+    <a href="https://drive.google.com/drive/" target="_blank" onclick="setScanCategoria()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:#1a73e8;color:white;border-radius:10px;font-size:16px;font-weight:600;text-decoration:none;margin-bottom:12px;box-sizing:border-box">
+      📷 Scansiona Scontrino con Drive
+    </a>
 
     <div id="scan-status" style="display:none;padding:8px 12px;background:#e8f0fe;border-radius:8px;margin-bottom:10px;color:#1a73e8;font-size:13px"></div>
     <img id="image-preview" alt="Anteprima" style="display:none;width:100%;border-radius:8px;margin-bottom:10px">
@@ -474,15 +473,9 @@ async function loadLastScan() {
 }
 
 // ─── CAMERA NATIVA ─────────────────────────────────────────────────────────
-function triggerScan() {
+function setScanCategoria() {
   document.getElementById('categoria').value = 'Lavoro Rimborso';
   onCategoriaChange();
-  // Apre l'app Google Drive in modalità scansione (senza fallback Chrome)
-  const a = document.createElement('a');
-  a.href = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.android.apps.docs;end';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
 }
 
 function onCameraCapture(evt) {
