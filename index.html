@@ -479,7 +479,7 @@ function triggerScan() {
   onCategoriaChange();
   // Apre l'app Google Drive in modalità scansione (senza fallback Chrome)
   const a = document.createElement('a');
-  a.href = 'intent://scan/#Intent;scheme=https;package=com.google.android.apps.docs;end';
+  a.href = 'intent:#Intent;component=com.google.android.apps.docs/com.google.android.apps.docs.app.ScanActivity;end';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -700,6 +700,11 @@ async function submitExpense() {
 
   if (!data || !categoria || !tipologia || !importo) {
     showStatus('⚠️ Compila i campi obbligatori: Data, Categoria, Tipologia, Importo', 'error');
+    return;
+  }
+  if (categoria === 'Lavoro Rimborso' && !cliente) {
+    showStatus('⚠️ Il campo Cliente è obbligatorio per Lavoro Rimborso', 'error');
+    document.getElementById('cliente').focus();
     return;
   }
 
