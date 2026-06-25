@@ -191,8 +191,8 @@
   <!-- FORM -->
   <div class="card">
 
-    <button onclick="document.getElementById('cam-input').click()" style="width:100%;padding:14px;background:#1a73e8;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px">
-      📷 Scansiona Scontrino
+    <button onclick="triggerScan()" style="width:100%;padding:14px;background:#1a73e8;color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px">
+      📷 Scansiona / Carica Scontrino
     </button>
     <input type="file" id="cam-input" accept="image/*,application/pdf" style="display:none" onchange="onCameraCapture(event)">
 
@@ -474,6 +474,17 @@ async function loadLastScan() {
 }
 
 // ─── CAMERA NATIVA ─────────────────────────────────────────────────────────
+function triggerScan() {
+  document.getElementById('categoria').value = 'Lavoro Rimborso';
+  onCategoriaChange();
+  // Apre l'app Google Drive in modalità scansione (senza fallback Chrome)
+  const a = document.createElement('a');
+  a.href = 'intent://scan/#Intent;scheme=https;package=com.google.android.apps.docs;end';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function onCameraCapture(evt) {
   const file = evt.target.files[0];
   if (!file) return;
