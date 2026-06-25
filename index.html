@@ -474,11 +474,16 @@ async function loadLastScan() {
 
 // ─── CAMERA NATIVA (Android Intent) ───────────────────────────────────────
 function openNativeCamera() {
-  // Imposta subito Lavoro Rimborso
   document.getElementById('categoria').value = 'Lavoro Rimborso';
   onCategoriaChange();
-  // Apre l'app fotocamera nativa come processo separato
-  window.location.href = 'intent:#Intent;action=android.media.action.STILL_IMAGE_CAMERA;end';
+
+  // Prova ad aprire il Drive scanner via intent (Android)
+  const a = document.createElement('a');
+  a.href = 'intent://scan/#Intent;scheme=https;package=com.google.android.apps.docs;S.browser_fallback_url=https%3A%2F%2Fdrive.google.com;end';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 500);
 }
 
 // Quando l'utente torna sull'app, carica automaticamente da Temp
