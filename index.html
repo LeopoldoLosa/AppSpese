@@ -479,7 +479,7 @@ function triggerScan() {
   onCategoriaChange();
   // Apre l'app Google Drive in modalità scansione (senza fallback Chrome)
   const a = document.createElement('a');
-  a.href = 'intent:#Intent;component=com.google.android.apps.docs/com.google.android.apps.docs.app.ScanActivity;end';
+  a.href = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.android.apps.docs;end';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
