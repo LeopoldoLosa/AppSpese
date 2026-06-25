@@ -233,6 +233,11 @@
       <input type="text" id="cliente" placeholder="Digita o scegli" list="clienti-list" autocomplete="off">
       <datalist id="clienti-list"></datalist>
     </div>
+
+    <div class="field">
+      <label>Note</label>
+      <textarea id="note" placeholder="Note aggiuntive..." style="min-height:52px"></textarea>
+    </div>
   </div>
 
   <button id="submit-btn" onclick="submitExpense()">💾 Salva Spesa</button>
@@ -681,6 +686,7 @@ async function submitExpense() {
   const tipologia = document.getElementById('tipologia').value;
   const importo   = document.getElementById('importo').value;
   const cliente   = document.getElementById('cliente').value;
+  const note      = document.getElementById('note').value;
 
   if (!data || !categoria || !tipologia || !importo) {
     showStatus('⚠️ Compila i campi obbligatori: Data, Categoria, Tipologia, Importo', 'error');
@@ -705,7 +711,7 @@ async function submitExpense() {
     }
 
     showStatus('⏳ Salvataggio nel foglio...', 'loading');
-    await appendToSheet([data, parseFloat(importo) || importo, categoria, tipologia, cliente]);
+    await appendToSheet([data, parseFloat(importo) || importo, categoria, tipologia, cliente, note, giustificativo]);
 
     showStatus('✅ Spesa salvata!', 'success');
     resetForm();
@@ -765,10 +771,13 @@ async function uploadToDrive(blob, filename, dateStr) {
   const yearId  = await findOrCreateFolder(year,             giustId);
   const monthId = await findOrCreateFolder(monthName,        yearId);
 
+  // Percorso locale leggibile (Esplora risorse) — Drive sincronizzato in G:\Il mio Drive\Spese
+  const localPath = `G:\\Il mio Drive\\Spese\\Giustificativi\\${year}\\${monthName}\\${filename}`;
+
   // Se il file viene da Drive/Temp: rinomina e sposta (nessun upload)
   if (capturedImage.driveFileId) {
     const url = `https://www.googleapis.com/drive/v3/files/${capturedImage.driveFileId}`
-      + `?addParents=${monthId}&removeParents=${capturedImage.driveParentId}&fields=id,webViewLink`;
+      + `?addParents=${monthId}&removeParents=${capturedImage.driveParentId}&fields=id`;
     const resp = await fetch(url, {
       method: 'PATCH',
       headers: { Authorization: 'Bearer ' + googleToken, 'Content-Type': 'application/json' },
@@ -776,7 +785,7 @@ async function uploadToDrive(blob, filename, dateStr) {
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error?.message || 'Errore rinomina file Drive');
-    return data.webViewLink || '';
+    return localPath;
   }
 
   // Altrimenti upload classico
@@ -785,19 +794,19 @@ async function uploadToDrive(blob, filename, dateStr) {
   form.append('metadata', new Blob([meta], { type: 'application/json' }));
   form.append('file', blob);
 
-  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + googleToken },
     body: form
   });
   const data = await resp.json();
   if (!resp.ok) throw new Error(data.error?.message || 'Upload Drive fallito');
-  return data.webViewLink || '';
+  return localPath;
 }
 
 // ─── RESET ─────────────────────────────────────────────────────────────────
 function resetForm() {
-  ['importo','cliente'].forEach(id => document.getElementById(id).value = '');
+  ['importo','cliente','note'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('categoria').value = 'Personale';
   onCategoriaChange();
   document.getElementById('data').value = todayISO();
