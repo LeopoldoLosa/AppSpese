@@ -541,13 +541,18 @@ async function autoLoadFromTemp() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target.result.split(',')[1];
-      capturedImage = { base64, blob, type: file.mimeType, driveFileId: file.id, driveParentId: CONFIG.TEMP_FOLDER_ID };
+      capturedImage = { base64, blob, type: file.mimeType, name: file.name, driveFileId: file.id, driveParentId: CONFIG.TEMP_FOLDER_ID };
       const preview = document.getElementById('image-preview');
-      preview.src = e.target.result;
-      preview.style.display = 'block';
+      if (file.mimeType === 'application/pdf') {
+        preview.style.display = 'none';
+      } else {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      }
       document.getElementById('analyze-btn').style.display = 'block';
       const s = document.getElementById('scan-status');
-      s.textContent = `📄 ${file.name} — premi Analizza con AI`;
+      const icon = file.mimeType === 'application/pdf' ? '📕' : '🖼️';
+      s.textContent = `${icon} ${file.name} — premi Analizza con AI`;
       s.style.display = 'block';
       document.getElementById('categoria').value = 'Lavoro Rimborso';
       onCategoriaChange();
@@ -716,7 +721,8 @@ function buildFilename(data, cliente, tipologia) {
   const d  = data.replace(/-/g, '');
   const c  = (cliente   || 'NoCliente').replace(/[^a-zA-Z0-9]/g, '_');
   const t  = (tipologia || 'Spesa'    ).replace(/[^a-zA-Z0-9]/g, '_');
-  return `${d}_${c}_${t}.jpg`;
+  const ext = (capturedImage && capturedImage.type === 'application/pdf') ? 'pdf' : 'jpg';
+  return `${d}_${c}_${t}.${ext}`;
 }
 
 async function appendToSheet(values) {
